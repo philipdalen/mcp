@@ -39,7 +39,11 @@ jobs:
       - name: Previous Tag
         id: previous-tag
         run: |
-          tag=$(git describe --tags --abbrev=0 "${GITHUB_REF}^")
+          current_tag="${GITHUB_REF#refs/tags/}"
+          tag=$(git tag --sort=-version:refname | grep -A1 "^${current_tag}$" | tail -n1 || echo "")
+          if [ "$tag" = "$current_tag" ]; then
+            tag=""
+          fi
           echo "tag=$tag" >> $GITHUB_OUTPUT
 
       - name: Go Build
@@ -59,7 +63,7 @@ jobs:
           gh release create $version \
             --fail-on-no-commits \
             --generate-notes \
-            --notes-start-tag ${{ steps.previous-tag.outputs.tag }} \
+            ${{ steps.previous-tag.outputs.tag != '' && format('--notes-start-tag {0}', steps.previous-tag.outputs.tag) || '' }} \
             --verify-tag \
             releases/*
         env:
