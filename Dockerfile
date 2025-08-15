@@ -11,7 +11,7 @@
 #  ░         ░      ░      ░  ░   ░       ░  ░   ░     
 #       ░                       ░                      
 #
-FROM 343218184206.dkr.ecr.us-east-1.amazonaws.com/proxy/library/golang:1.24-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /usr/src/mcp
 COPY --chown=root:root . /usr/src/mcp
@@ -49,7 +49,7 @@ RUN go build -ldflags="-X 'github.com/teamwork/mcp/internal/config.Version=$BUIL
 #   ░░   ░  ░░░ ░ ░    ░   ░ ░    ░   ░ ░    ░     ░░   ░ 
 #    ░        ░              ░          ░    ░  ░   ░     
 #
-FROM 343218184206.dkr.ecr.us-east-1.amazonaws.com/proxy/library/alpine:3 AS runner
+FROM alpine:3 AS runner
 
 COPY --from=builder /app/tw-mcp-http /bin/tw-mcp-http
 COPY --from=builder /app/tw-mcp-stdio /bin/tw-mcp-stdio
