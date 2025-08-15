@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	if resources.Info.BearerToken == "" {
-		mcpError(resources, errors.New("TEAMWORK_BEARER_TOKEN environment variable is not set"), mcp.INVALID_PARAMS)
+		mcpError(resources, errors.New("TW_MCP_BEARER_TOKEN environment variable is not set"), mcp.INVALID_PARAMS)
 		exit(exitCodeSetupFailure)
 	}
 
