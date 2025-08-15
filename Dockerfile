@@ -54,4 +54,4 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vendor="Teamwork" \
       org.label-schema.version=$BUILD_VERSION
 
-ENTRYPOINT ["/bin/tw-mcp-http"]
+CMD ["/bin/tw-mcp-http"]
