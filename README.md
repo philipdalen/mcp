@@ -46,7 +46,7 @@ Production-ready HTTP server for cloud deployments and multi-client support.
 
 Quick start:
 ```bash
-TW_MCP_SERVER_ADDRESS=:8012 go run cmd/mcp-http/main.go
+TW_MCP_SERVER_ADDRESS=:8080 go run cmd/mcp-http/main.go
 ```
 
 ### 💬 STDIO Server

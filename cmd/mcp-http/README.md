@@ -40,12 +40,12 @@ This HTTP server is designed for:
 
 ```bash
 # Basic HTTP server
-TW_MCP_SERVER_ADDRESS=:8012 \
+TW_MCP_SERVER_ADDRESS=:8080 \
   go run cmd/mcp-http/main.go
 
 # With custom configuration
 TW_MCP_URL=https://my-mcp.example.com \
-  TW_MCP_SERVER_ADDRESS=localhost:8012 \
+  TW_MCP_SERVER_ADDRESS=:8080 \
   TW_MCP_LOG_LEVEL=debug \
   go run cmd/mcp-http/main.go
 ```
@@ -66,7 +66,7 @@ The server can be configured using the following environment variables:
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | `TW_MCP_VERSION` | Version of the MCP server | `dev` | `v1.0.0` |
-| `TW_MCP_SERVER_ADDRESS` | Server bind address | `localhost:8012` | `:8080`, `0.0.0.0:8012` |
+| `TW_MCP_SERVER_ADDRESS` | Server bind address | `:8080` | `:80`, `0.0.0.0:80` |
 | `TW_MCP_ENV` | Environment the app is running in | `dev` | `staging`, `production` |
 | `TW_MCP_AWS_REGION` | AWS region where the app is running | `us-east-1` | `eu-west-1` |
 | `TW_MCP_HAPROXY_URL` | HAProxy instance URL | _(empty)_ | `https://haproxy.example.com` |

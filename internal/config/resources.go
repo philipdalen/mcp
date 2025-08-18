@@ -76,7 +76,7 @@ type Resources struct {
 func newResources() Resources {
 	var resources Resources
 	resources.Info.Version = getEnv("TW_MCP_VERSION", Version)
-	resources.Info.ServerAddress = getEnv("TW_MCP_SERVER_ADDRESS", "localhost:8012")
+	resources.Info.ServerAddress = getEnv("TW_MCP_SERVER_ADDRESS", ":8080")
 	resources.Info.Environment = getEnv("TW_MCP_ENV", "dev")
 	resources.Info.AWSRegion = getEnv("TW_MCP_AWS_REGION", "us-east-1")
 	resources.Info.MCPURL = strings.TrimSuffix(getEnv("TW_MCP_URL", "https://mcp.ai.teamwork.com"), "/")
