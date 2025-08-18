@@ -77,6 +77,28 @@ Example snippet:
 ```
 
 Replace `<installation>` with your site domain (e.g. `mycompany.teamwork.com`).
+Alternatively, you can use a Docker image:
+
+```json
+{
+  "mcpServers": {
+    "Teamwork.com": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "TW_MCP_BEARER_TOKEN",
+        "ghcr.io/teamwork/mcp:latest"
+      ],
+      "env": {
+        "TW_MCP_BEARER_TOKEN": "<token>"
+      }
+    }
+  }
+}
+```
 
 ### 🧩 VSCode (GitHub Copilot Chat MCP)
 
