@@ -69,7 +69,6 @@ Example snippet:
       "command": "tw-mcp",
       "args": [],
       "env": {
-        "TW_MCP_API_URL": "https://<installation>.teamwork.com",
         "TW_MCP_BEARER_TOKEN": "<token>"
       }
     }
