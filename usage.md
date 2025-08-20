@@ -34,11 +34,6 @@ Ask an account administrator to enable MCP under Settings → AI.
 
 <img width="2876" height="1296" alt="image" src="https://github.com/user-attachments/assets/f76deec2-27fb-494d-9b0a-b0a8d302db3d" />
 
-> [!IMPORTANT]
-> If the AI tab is not yet visible, MCP runs in an auto-enabled state. When the
-> AI tab later appears, explicit enablement will be required or calls will be
-> blocked.
-
 ## 4. 🔌 Choose a Connection Mode
 
 Two main ways to connect:
