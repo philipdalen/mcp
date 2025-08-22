@@ -103,15 +103,21 @@ NODE_EXTRA_CA_CERTS=letsencrypt-stg-root-x1.pem npx @modelcontextprotocol/inspec
 
 ```
 ├── cmd/
-│   ├── mcp-http/         # HTTP server implementation
-│   ├── mcp-stdio/        # STDIO server implementation
-│   └── mcp-http-cli/     # CLI tool for testing
+│   ├── mcp-http/          # HTTP server implementation
+│   ├── mcp-stdio/         # STDIO server implementation
+│   └── mcp-http-cli/      # CLI tool for testing via HTTP
 ├── internal/
-│   ├── config/           # Configuration management
-│   ├── helpers/          # Utility functions
-│   ├── toolsets/         # Tool framework and management
-│   └── twprojects/       # Teamwork.com project operations
-├── examples/             # Usage examples and integrations
-├── chart/                # Kubernetes Helm chart
-└── Dockerfile            # Container build configuration
+│   ├── auth/              # Authentication helpers (bearer & OAuth2 token handling)
+│   ├── config/            # Configuration management (env, flags)
+│   ├── helpers/           # Shared utility functions (errors, link helpers, tool parsing)
+│   ├── request/           # HTTP request primitives / Teamwork API wiring
+│   ├── toolsets/          # Tool framework and registration logic
+│   └── twprojects/        # Teamwork project/domain tools (tasks, tags, timers, etc.)
+├── examples/              # Usage & integration examples (LangChain Node/Python)
+├── usage.md               # End-user setup & connection guide
+├── Makefile               # Common developer tasks
+├── Dockerfile             # Container build configuration
+├── CODE_OF_CONDUCT.md     # Community guidelines
+├── CONTRIBUTING.md        # Contribution guide
+└── SECURITY.md            # Security policy
 ```
