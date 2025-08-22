@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -177,19 +179,6 @@ func authMiddleware(resources config.Resources, next http.Handler) http.Handler 
 	whitelistEndpoints := map[string][]string{
 		// health checks don't require authentication
 		"/api/health": {http.MethodGet, http.MethodOptions},
-
-		// allow some protocol methods to bypass authentication
-		//
-		// https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/tools#listing-tools
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#listing-resources
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-templates
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#listing-prompts
-		"/":                         {http.MethodPost},
-		"/tools/list":               {http.MethodPost},
-		"/resources/list":           {http.MethodPost},
-		"/resources/templates/list": {http.MethodPost},
-		"/prompts/list":             {http.MethodPost},
 	}
 
 	whitelistPrefixEndpoints := map[string][]string{
@@ -198,23 +187,45 @@ func authMiddleware(resources config.Resources, next http.Handler) http.Handler 
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// some endpoints don't require auth
-		if methods, ok := whitelistEndpoints[r.URL.Path]; ok && slices.Contains(methods, r.Method) {
-			next.ServeHTTP(w, r)
-			return
-		}
-		for prefix, methods := range whitelistPrefixEndpoints {
-			if strings.HasPrefix(r.URL.Path, prefix) && slices.Contains(methods, r.Method) {
-				next.ServeHTTP(w, r)
-				return
-			}
-		}
-
 		requestLogger := resources.Logger().With(
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.String("query", r.URL.RawQuery),
 		)
+
+		if r.Header.Get("Authorization") == "" {
+			// some endpoints don't require auth
+
+			if methods, ok := whitelistEndpoints[r.URL.Path]; ok && slices.Contains(methods, r.Method) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			for prefix, methods := range whitelistPrefixEndpoints {
+				if strings.HasPrefix(r.URL.Path, prefix) && slices.Contains(methods, r.Method) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			content, err := io.ReadAll(r.Body)
+			if err != nil {
+				requestLogger.ErrorContext(r.Context(), "failed to read request body",
+					slog.String("error", err.Error()),
+				)
+				http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+				return
+			}
+
+			bypass, err := auth.Bypass(content)
+			switch {
+			case err != nil, !bypass:
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			default:
+				r.Body = io.NopCloser(bytes.NewBuffer(content))
+				next.ServeHTTP(w, r)
+			}
+			return
+		}
 
 		matches := reBearerToken.FindStringSubmatch(r.Header.Get("Authorization"))
 		if len(matches) < 2 {

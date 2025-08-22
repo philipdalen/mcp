@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -21,23 +20,7 @@ import (
 )
 
 var (
-	methods          = methodsInput([]toolsets.Method{toolsets.MethodAll})
-	methodsWhitelist = []string{
-		// allow some protocol methods to bypass authentication
-		//
-		// https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/tools#listing-tools
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#listing-resources
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-templates
-		// https://modelcontextprotocol.io/specification/2025-06-18/server/prompts#listing-prompts
-		"initialize",
-		"notifications/initialized",
-		"logging/setLevel",
-		"tools/list",
-		"resources/list",
-		"resources/templates/list",
-		"prompts/list",
-	}
+	methods  = methodsInput([]toolsets.Method{toolsets.MethodAll})
 	readOnly bool
 )
 
@@ -73,7 +56,7 @@ func main() {
 		exit(exitCodeSetupFailure)
 	}
 	mcpSTDIOServer := server.NewStdioServer(mcpServer)
-	stdinWrapper := newStdinWrapper(resources.Logger(), resources.Info.BearerToken != "", methodsWhitelist)
+	stdinWrapper := newStdinWrapper(resources.Logger(), resources.Info.BearerToken != "")
 	if err := mcpSTDIOServer.Listen(ctx, stdinWrapper, os.Stdout); err != nil {
 		mcpError(resources.Logger(), fmt.Errorf("failed to serve: %s", err), mcp.INTERNAL_ERROR)
 		exit(exitCodeSetupFailure)
@@ -128,16 +111,14 @@ func (t *methodsInput) Set(value string) error {
 }
 
 type stdinWrapper struct {
-	logger           *slog.Logger
-	authenticated    bool
-	methodsWhitelist []string
+	logger        *slog.Logger
+	authenticated bool
 }
 
-func newStdinWrapper(logger *slog.Logger, authenticated bool, methods []string) stdinWrapper {
+func newStdinWrapper(logger *slog.Logger, authenticated bool) stdinWrapper {
 	return stdinWrapper{
-		logger:           logger,
-		authenticated:    authenticated,
-		methodsWhitelist: methods,
+		logger:        logger,
+		authenticated: authenticated,
 	}
 }
 
@@ -154,13 +135,9 @@ func (s stdinWrapper) Read(p []byte) (n int, err error) {
 	if len(content) == 0 {
 		return n, err
 	}
-	var baseMessage struct {
-		Method string `json:"method"`
-	}
-	if err := json.Unmarshal(content, &baseMessage); err != nil {
-		return 0, errors.New("parse error")
-	}
-	if !slices.Contains(s.methodsWhitelist, baseMessage.Method) {
+	if bypass, err := auth.Bypass(content); err != nil {
+		return 0, err
+	} else if !bypass {
 		return 0, errors.New("not authenticated")
 	}
 	copy(p, buffer)
