@@ -27,7 +27,7 @@ var (
 func main() {
 	defer handleExit()
 
-	resources, teardown := config.Load()
+	resources, teardown := config.Load(os.Stderr)
 	defer teardown()
 
 	flag.Var(&methods, "toolsets", "Comma-separated list of toolsets to enable")
@@ -36,18 +36,20 @@ func main() {
 
 	ctx := context.Background()
 
+	var authenticated bool
 	if resources.Info.BearerToken != "" {
 		// detect the installation from the bearer token
-		info, err := auth.GetBearerInfo(ctx, resources, resources.Info.BearerToken)
-		if err != nil {
-			mcpError(resources.Logger(), fmt.Errorf("failed to authenticate: %s", err), mcp.INVALID_PARAMS)
-			exit(exitCodeSetupFailure)
+		if info, err := auth.GetBearerInfo(ctx, resources, resources.Info.BearerToken); err != nil {
+			resources.Logger().Error("failed to get bearer info",
+				slog.String("error", err.Error()),
+			)
+		} else {
+			authenticated = true
+			// inject customer URL in the context
+			ctx = config.WithCustomerURL(ctx, info.URL)
+			// inject bearer token in the context
+			ctx = session.WithBearerTokenContext(ctx, session.NewBearerToken(resources.Info.BearerToken, info.URL))
 		}
-
-		// inject customer URL in the context
-		ctx = config.WithCustomerURL(ctx, info.URL)
-		// inject bearer token in the context
-		ctx = session.WithBearerTokenContext(ctx, session.NewBearerToken(resources.Info.BearerToken, info.URL))
 	}
 
 	mcpServer, err := newMCPServer(resources)
@@ -56,7 +58,7 @@ func main() {
 		exit(exitCodeSetupFailure)
 	}
 	mcpSTDIOServer := server.NewStdioServer(mcpServer)
-	stdinWrapper := newStdinWrapper(resources.Logger(), resources.Info.BearerToken != "")
+	stdinWrapper := newStdinWrapper(resources.Logger(), authenticated)
 	if err := mcpSTDIOServer.Listen(ctx, stdinWrapper, os.Stdout); err != nil {
 		mcpError(resources.Logger(), fmt.Errorf("failed to serve: %s", err), mcp.INTERNAL_ERROR)
 		exit(exitCodeSetupFailure)

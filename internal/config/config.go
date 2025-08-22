@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -31,9 +32,9 @@ const (
 )
 
 // Load loads the configuration for the MCP service.
-func Load() (Resources, func()) {
+func Load(logOutput io.Writer) (Resources, func()) {
 	resources := newResources()
-	resources.logger = slog.New(newCustomLogHandler(resources))
+	resources.logger = slog.New(newCustomLogHandler(resources, logOutput))
 	resources.teamworkHTTPClient = new(http.Client)
 
 	var haProxyURL *url.URL

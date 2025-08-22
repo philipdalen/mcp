@@ -32,7 +32,7 @@ var reBearerToken = regexp.MustCompile(`^Bearer (.+)$`)
 func main() {
 	defer handleExit()
 
-	resources, teardown := config.Load()
+	resources, teardown := config.Load(os.Stdout)
 	defer teardown()
 
 	done := make(chan os.Signal, 1)
