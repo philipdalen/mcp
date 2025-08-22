@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -59,7 +60,7 @@ func main() {
 	}
 	mcpSTDIOServer := server.NewStdioServer(mcpServer)
 	stdinWrapper := newStdinWrapper(resources.Logger(), authenticated)
-	if err := mcpSTDIOServer.Listen(ctx, stdinWrapper, os.Stdout); err != nil {
+	if err := mcpSTDIOServer.Listen(ctx, &stdinWrapper, os.Stdout); err != nil {
 		mcpError(resources.Logger(), fmt.Errorf("failed to serve: %s", err), mcp.INTERNAL_ERROR)
 		exit(exitCodeSetupFailure)
 	}
@@ -114,6 +115,7 @@ func (t *methodsInput) Set(value string) error {
 
 type stdinWrapper struct {
 	logger        *slog.Logger
+	buffer        []byte
 	authenticated bool
 }
 
@@ -124,24 +126,40 @@ func newStdinWrapper(logger *slog.Logger, authenticated bool) stdinWrapper {
 	}
 }
 
-func (s stdinWrapper) Read(p []byte) (n int, err error) {
+func (s *stdinWrapper) Read(p []byte) (n int, err error) {
 	if s.authenticated {
 		return os.Stdin.Read(p)
 	}
+
 	buffer := make([]byte, len(p))
 	n, err = os.Stdin.Read(buffer)
 	if err != nil {
 		return n, err
 	}
 	content := buffer[:n]
-	if len(content) == 0 {
-		return n, err
+	s.buffer = append(s.buffer, content...)
+
+	for {
+		lineBreakPos := bytes.Index(s.buffer, []byte("\n"))
+		if lineBreakPos == -1 {
+			break
+		}
+		var remaining []byte
+		if lineBreakPos+1 > len(s.buffer) {
+			remaining = s.buffer[lineBreakPos+1:]
+		}
+		content = s.buffer[:lineBreakPos]
+		s.buffer = remaining
+
+		if len(content) > 0 {
+			if bypass, err := auth.Bypass(content); err != nil {
+				return 0, err
+			} else if !bypass {
+				return 0, errors.New("not authenticated")
+			}
+		}
 	}
-	if bypass, err := auth.Bypass(content); err != nil {
-		return 0, err
-	} else if !bypass {
-		return 0, errors.New("not authenticated")
-	}
+
 	copy(p, buffer)
 	return n, err
 }
