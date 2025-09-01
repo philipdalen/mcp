@@ -303,7 +303,7 @@ github.com/shirou/gopsutil/v4/process
 # github.com/spf13/cast v1.7.1
 ## explicit; go 1.19
 github.com/spf13/cast
-# github.com/teamwork/twapi-go-sdk v1.0.2-0.20250828121816-91bf2f945f7b
+# github.com/teamwork/twapi-go-sdk v1.0.2-0.20250901080306-a9d27475b0c8
 ## explicit; go 1.24.2
 github.com/teamwork/twapi-go-sdk
 github.com/teamwork/twapi-go-sdk/internal/browser
