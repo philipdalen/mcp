@@ -13,19 +13,15 @@ import (
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
-// List of rate methods available in the Teamwork.com MCP service.
-//
-// The naming convention for methods follows a pattern described here:
-// https://github.com/github/github-mcp-server/issues/333
 const (
 	// Read operations
-	MethodRateUserGet                    toolsets.Method = "twprojects-get_user_rates"
-	MethodRateInstallationUserList       toolsets.Method = "twprojects-list_installation_user_rates"
-	MethodRateInstallationUserGet        toolsets.Method = "twprojects-get_installation_user_rate"
-	MethodRateProjectGet                 toolsets.Method = "twprojects-get_project_rate"
-	MethodRateProjectUserList            toolsets.Method = "twprojects-list_project_user_rates"
-	MethodRateProjectUserGet             toolsets.Method = "twprojects-get_project_user_rate"
-	MethodRateProjectUserHistoryGet      toolsets.Method = "twprojects-get_project_user_rate_history"
+	MethodRateUserGet               toolsets.Method = "twprojects-get_user_rates"
+	MethodRateInstallationUserList  toolsets.Method = "twprojects-list_installation_user_rates"
+	MethodRateInstallationUserGet   toolsets.Method = "twprojects-get_installation_user_rate"
+	MethodRateProjectGet            toolsets.Method = "twprojects-get_project_rate"
+	MethodRateProjectUserList       toolsets.Method = "twprojects-list_project_user_rates"
+	MethodRateProjectUserGet        toolsets.Method = "twprojects-get_project_user_rate"
+	MethodRateProjectUserHistoryGet toolsets.Method = "twprojects-get_project_user_rate_history"
 
 	// Write operations
 	MethodRateInstallationUserUpdate     toolsets.Method = "twprojects-update_installation_user_rate"
@@ -44,7 +40,6 @@ const ratesDescription = "The rates feature in Teamwork.com enables organization
 	"are supported, providing comprehensive financial oversight of project work."
 
 func init() {
-	// Register rate-related methods
 	toolsets.RegisterMethod(MethodRateUserGet)
 	toolsets.RegisterMethod(MethodRateInstallationUserList)
 	toolsets.RegisterMethod(MethodRateInstallationUserGet)
@@ -580,7 +575,7 @@ func RateProjectAndUsersUpdate(engine *twapi.Engine) server.ServerTool {
 			var rateProjectAndUsersUpdateRequest projects.RateProjectAndUsersUpdateRequest
 
 			args := request.GetArguments()
-			
+
 			err := helpers.ParamGroup(args,
 				helpers.RequiredNumericParam(&rateProjectAndUsersUpdateRequest.Path.ProjectID, "project_id"),
 				helpers.OptionalNumericParam(&rateProjectAndUsersUpdateRequest.ProjectRate, "project_rate"),
