@@ -438,7 +438,7 @@ func RateInstallationUserUpdate(engine *twapi.Engine) server.ServerTool {
 
 			err := helpers.ParamGroup(request.GetArguments(),
 				helpers.RequiredNumericParam(&rateInstallationUserUpdateRequest.Path.UserID, "user_id"),
-				helpers.RequiredNumericParam(&rateInstallationUserUpdateRequest.UserRate, "user_rate"),
+				helpers.OptionalNumericPointerParam(&rateInstallationUserUpdateRequest.UserRate, "user_rate"),
 				helpers.OptionalNumericPointerParam(&rateInstallationUserUpdateRequest.CurrencyID, "currency_id"),
 			)
 			if err != nil {
@@ -487,7 +487,7 @@ func RateInstallationUserBulkUpdate(engine *twapi.Engine) server.ServerTool {
 			var rateInstallationUserBulkUpdateRequest projects.RateInstallationUserBulkUpdateRequest
 
 			err := helpers.ParamGroup(request.GetArguments(),
-				helpers.RequiredNumericParam(&rateInstallationUserBulkUpdateRequest.UserRate, "user_rate"),
+				helpers.OptionalNumericPointerParam(&rateInstallationUserBulkUpdateRequest.UserRate, "user_rate"),
 				helpers.OptionalParam(&rateInstallationUserBulkUpdateRequest.All, "all"),
 				helpers.OptionalNumericListParam(&rateInstallationUserBulkUpdateRequest.IDs, "ids"),
 				helpers.OptionalNumericListParam(&rateInstallationUserBulkUpdateRequest.ExcludeIDs, "exclude_ids"),
@@ -526,7 +526,7 @@ func RateProjectUpdate(engine *twapi.Engine) server.ServerTool {
 
 			err := helpers.ParamGroup(request.GetArguments(),
 				helpers.RequiredNumericParam(&rateProjectUpdateRequest.Path.ProjectID, "project_id"),
-				helpers.RequiredNumericParam(&rateProjectUpdateRequest.ProjectRate, "project_rate"),
+				helpers.OptionalNumericPointerParam(&rateProjectUpdateRequest.ProjectRate, "project_rate"),
 			)
 			if err != nil {
 				return mcp.NewToolResultErrorFromErr("invalid parameters", err), nil
@@ -654,7 +654,7 @@ func RateProjectUserUpdate(engine *twapi.Engine) server.ServerTool {
 			err := helpers.ParamGroup(request.GetArguments(),
 				helpers.RequiredNumericParam(&rateProjectUserUpdateRequest.Path.ProjectID, "project_id"),
 				helpers.RequiredNumericParam(&rateProjectUserUpdateRequest.Path.UserID, "user_id"),
-				helpers.RequiredNumericParam(&rateProjectUserUpdateRequest.UserRate, "user_rate"),
+				helpers.OptionalNumericPointerParam(&rateProjectUserUpdateRequest.UserRate, "user_rate"),
 				helpers.OptionalNumericPointerParam(&rateProjectUserUpdateRequest.CurrencyID, "currency_id"),
 			)
 			if err != nil {
