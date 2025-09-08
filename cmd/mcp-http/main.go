@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -29,7 +32,7 @@ var reBearerToken = regexp.MustCompile(`^Bearer (.+)$`)
 func main() {
 	defer handleExit()
 
-	resources, teardown := config.Load()
+	resources, teardown := config.Load(os.Stdout)
 	defer teardown()
 
 	done := make(chan os.Signal, 1)
@@ -173,19 +176,56 @@ func tracerMiddleware(resources config.Resources, next http.Handler) http.Handle
 }
 
 func authMiddleware(resources config.Resources, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// some endpoints don't require auth
-		if (r.URL.Path == "/api/health" || strings.HasPrefix(r.URL.Path, "/.well-known")) &&
-			(r.Method == http.MethodGet || r.Method == http.MethodOptions) {
-			next.ServeHTTP(w, r)
-			return
-		}
+	whitelistEndpoints := map[string][]string{
+		// health checks don't require authentication
+		"/api/health": {http.MethodGet, http.MethodOptions},
+	}
 
+	whitelistPrefixEndpoints := map[string][]string{
+		// OAuth2 endpoints cannot require authentication
+		"/.well-known": {"GET", "OPTIONS"},
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := resources.Logger().With(
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.String("query", r.URL.RawQuery),
 		)
+
+		if r.Header.Get("Authorization") == "" {
+			// some endpoints don't require auth
+
+			if methods, ok := whitelistEndpoints[r.URL.Path]; ok && slices.Contains(methods, r.Method) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			for prefix, methods := range whitelistPrefixEndpoints {
+				if strings.HasPrefix(r.URL.Path, prefix) && slices.Contains(methods, r.Method) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			content, err := io.ReadAll(r.Body)
+			if err != nil {
+				requestLogger.ErrorContext(r.Context(), "failed to read request body",
+					slog.String("error", err.Error()),
+				)
+				http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+				return
+			}
+
+			bypass, err := auth.Bypass(content)
+			switch {
+			case err != nil, !bypass:
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			default:
+				r.Body = io.NopCloser(bytes.NewBuffer(content))
+				next.ServeHTTP(w, r)
+			}
+			return
+		}
 
 		matches := reBearerToken.FindStringSubmatch(r.Header.Get("Authorization"))
 		if len(matches) < 2 {

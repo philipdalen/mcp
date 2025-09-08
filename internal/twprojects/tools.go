@@ -30,6 +30,11 @@ func DefaultToolsetGroup(readOnly, allowDelete bool, engine *twapi.Engine) *tool
 		CommentUpdate(engine),
 		TimelogCreate(engine),
 		TimelogUpdate(engine),
+		TimerCreate(engine),
+		TimerUpdate(engine),
+		TimerPause(engine),
+		TimerResume(engine),
+		TimerComplete(engine),
 		RateInstallationUserUpdate(engine),
 		RateInstallationUserBulkUpdate(engine),
 		RateProjectUpdate(engine),
@@ -48,6 +53,7 @@ func DefaultToolsetGroup(readOnly, allowDelete bool, engine *twapi.Engine) *tool
 			TeamDelete(engine),
 			CommentDelete(engine),
 			TimelogDelete(engine),
+			TimerDelete(engine),
 		}...)
 	}
 
@@ -89,6 +95,10 @@ func DefaultToolsetGroup(readOnly, allowDelete bool, engine *twapi.Engine) *tool
 			TimelogList(engine),
 			TimelogListByProject(engine),
 			TimelogListByTask(engine),
+			TimerGet(engine),
+			TimerList(engine),
+			ActivityList(engine),
+			ActivityListByProject(engine),
 			RateUserGet(engine),
 			RateInstallationUserList(engine),
 			RateInstallationUserGet(engine),

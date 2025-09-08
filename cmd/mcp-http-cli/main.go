@@ -22,7 +22,7 @@ var (
 func main() {
 	defer handleExit()
 
-	resources, teardown := config.Load()
+	resources, teardown := config.Load(os.Stdout)
 	defer teardown()
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {

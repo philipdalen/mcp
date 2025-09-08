@@ -2,8 +2,8 @@ package config
 
 import (
 	"context"
+	"io"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/getsentry/sentry-go"
@@ -57,7 +57,7 @@ func (h *customLogHandler) WithGroup(name string) slog.Handler {
 	return logHandler
 }
 
-func newCustomLogHandler(resources Resources) slog.Handler {
+func newCustomLogHandler(resources Resources, output io.Writer) slog.Handler {
 	var logLevel slog.Level
 	if err := logLevel.UnmarshalText([]byte(resources.Info.Log.Level)); err != nil {
 		logLevel = slog.LevelInfo
@@ -65,11 +65,11 @@ func newCustomLogHandler(resources Resources) slog.Handler {
 
 	var handler, sentryHandler slog.Handler
 	if strings.EqualFold(resources.Info.Log.Format, "json") {
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		handler = slog.NewJSONHandler(output, &slog.HandlerOptions{
 			Level: logLevel,
 		})
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		handler = slog.NewTextHandler(output, &slog.HandlerOptions{
 			Level: logLevel,
 		})
 	}
