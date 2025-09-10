@@ -22,6 +22,7 @@ const (
 	MethodTaskUpdate         toolsets.Method = "twprojects-update_task"
 	MethodTaskDelete         toolsets.Method = "twprojects-delete_task"
 	MethodTaskGet            toolsets.Method = "twprojects-get_task"
+	MethodTaskGetUI          toolsets.Method = "twprojects-get_task_ui"
 	MethodTaskList           toolsets.Method = "twprojects-list_tasks"
 	MethodTaskListByTasklist toolsets.Method = "twprojects-list_tasks_by_tasklist"
 	MethodTaskListByProject  toolsets.Method = "twprojects-list_tasks_by_project"
@@ -40,6 +41,7 @@ func init() {
 	toolsets.RegisterMethod(MethodTaskUpdate)
 	toolsets.RegisterMethod(MethodTaskDelete)
 	toolsets.RegisterMethod(MethodTaskGet)
+	toolsets.RegisterMethod(MethodTaskGetUI)
 	toolsets.RegisterMethod(MethodTaskList)
 	toolsets.RegisterMethod(MethodTaskListByTasklist)
 	toolsets.RegisterMethod(MethodTaskListByProject)
@@ -357,6 +359,52 @@ func TaskGet(engine *twapi.Engine) server.ServerTool {
 	}
 }
 
+// TaskGetUI retrieves a task returning a UI-friendly representation in
+// Teamwork.com.
+func TaskGetUI(engine *twapi.Engine) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool(string(MethodTaskGetUI),
+			mcp.WithDescription("Get an existing task in Teamwork.com. "+taskDescription),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				ReadOnlyHint: twapi.Ptr(true),
+			}),
+			mcp.WithNumber("id",
+				mcp.Required(),
+				mcp.Description("The ID of the task to get."),
+			),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			var taskGetRequest projects.TaskGetRequest
+
+			err := helpers.ParamGroup(request.GetArguments(),
+				helpers.RequiredNumericParam(&taskGetRequest.Path.ID, "id"),
+			)
+			if err != nil {
+				return mcp.NewToolResultErrorFromErr("invalid parameters", err), nil
+			}
+
+			task, err := projects.TaskGet(ctx, engine, taskGetRequest)
+			if err != nil {
+				return helpers.HandleAPIError(err, "failed to get task")
+			}
+
+			htmlContent := fmt.Sprintf(`<h1>Task: %s (ID: %d)</h1><br>
+				<img src="https://i.cbc.ca/1.4248390.1502826362!/fileImage/httpImage/image.jpg_gen/derivatives/16x9_1180/beer-glasses.jpg">`,
+				task.Task.Name, task.Task.ID)
+
+			var content UIResource
+			content.Type = "resource"
+			content.Resource.MIMEType = "text/html"
+			content.Resource.Text = htmlContent
+			content.Resource.URI = fmt.Sprintf("ui://twprojects/tasks/%d", task.Task.ID)
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{content},
+			}, nil
+		},
+	}
+}
+
 // TaskList lists tasks in Teamwork.com.
 func TaskList(engine *twapi.Engine) server.ServerTool {
 	return server.ServerTool{
@@ -543,3 +591,42 @@ func TaskListByProject(engine *twapi.Engine) server.ServerTool {
 		},
 	}
 }
+
+// UIResource represents a UI resource content type.
+type UIResource struct {
+	// hack to implement mcp.Content
+	mcp.TextContent
+
+	// Type indicates the type of content. For a resource, this should be
+	// "resource".
+	Type string `json:"type"`
+
+	// Resource contains the actual resource data.
+	Resource struct {
+		// Meta is a metadata object that is reserved by MCP for storing additional information.
+		Meta *struct {
+			// If specified, the caller is requesting out-of-band progress
+			// notifications for this request (as represented by
+			// notifications/progress). The value of this parameter is an opaque token
+			// that will be attached to any subsequent notifications. The receiver is
+			// not obligated to provide these notifications.
+			ProgressToken any
+
+			// AdditionalFields are any fields present in the Meta that are not
+			// otherwise defined in the protocol.
+			AdditionalFields map[string]any
+		} `json:"_meta,omitempty"`
+		// The URI of this resource.
+		URI string `json:"uri"`
+		// The MIME type of this resource, if known.
+		MIMEType string `json:"mimeType,omitempty"`
+		// The text of the item. This must only be set if the item can actually be
+		// represented as text (not binary data).
+		Text string `json:"text,omitempty"`
+		// A base64-encoded representation of the resource. This must only be set if
+		// the resource cannot be represented as text.
+		Blob string `json:"blob,omitempty"`
+	} `json:"resource"`
+}
+
+func (r UIResource) isContent() {}
