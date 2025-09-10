@@ -1,6 +1,6 @@
 module github.com/teamwork/mcp
 
-go 1.24.2
+go 1.25.1
 
 require (
 	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.2.3
