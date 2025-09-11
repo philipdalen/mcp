@@ -22,7 +22,6 @@ const (
 	MethodTaskUpdate         toolsets.Method = "twprojects-update_task"
 	MethodTaskDelete         toolsets.Method = "twprojects-delete_task"
 	MethodTaskGet            toolsets.Method = "twprojects-get_task"
-	MethodTaskGetUI          toolsets.Method = "twprojects-get_task_ui"
 	MethodTaskList           toolsets.Method = "twprojects-list_tasks"
 	MethodTaskListByTasklist toolsets.Method = "twprojects-list_tasks_by_tasklist"
 	MethodTaskListByProject  toolsets.Method = "twprojects-list_tasks_by_project"
@@ -41,7 +40,6 @@ func init() {
 	toolsets.RegisterMethod(MethodTaskUpdate)
 	toolsets.RegisterMethod(MethodTaskDelete)
 	toolsets.RegisterMethod(MethodTaskGet)
-	toolsets.RegisterMethod(MethodTaskGetUI)
 	toolsets.RegisterMethod(MethodTaskList)
 	toolsets.RegisterMethod(MethodTaskListByTasklist)
 	toolsets.RegisterMethod(MethodTaskListByProject)
@@ -348,46 +346,6 @@ func TaskGet(engine *twapi.Engine) server.ServerTool {
 				return helpers.HandleAPIError(err, "failed to get task")
 			}
 
-			encoded, err := json.Marshal(task)
-			if err != nil {
-				return nil, err
-			}
-			return mcp.NewToolResultText(string(helpers.WebLinker(ctx, encoded,
-				helpers.WebLinkerWithIDPathBuilder("/app/tasks"),
-			))), nil
-		},
-	}
-}
-
-// TaskGetUI retrieves a task returning a UI-friendly representation in
-// Teamwork.com.
-func TaskGetUI(engine *twapi.Engine) server.ServerTool {
-	return server.ServerTool{
-		Tool: mcp.NewTool(string(MethodTaskGetUI),
-			mcp.WithDescription("Get an existing task in Teamwork.com. "+taskDescription),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				ReadOnlyHint: twapi.Ptr(true),
-			}),
-			mcp.WithNumber("id",
-				mcp.Required(),
-				mcp.Description("The ID of the task to get."),
-			),
-		),
-		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			var taskGetRequest projects.TaskGetRequest
-
-			err := helpers.ParamGroup(request.GetArguments(),
-				helpers.RequiredNumericParam(&taskGetRequest.Path.ID, "id"),
-			)
-			if err != nil {
-				return mcp.NewToolResultErrorFromErr("invalid parameters", err), nil
-			}
-
-			task, err := projects.TaskGet(ctx, engine, taskGetRequest)
-			if err != nil {
-				return helpers.HandleAPIError(err, "failed to get task")
-			}
-
 			htmlContent := fmt.Sprintf(`
 				const button = document.createElement('ui-button');
 				button.setAttribute('label', '%s');
@@ -397,17 +355,28 @@ func TaskGetUI(engine *twapi.Engine) server.ServerTool {
 				root.appendChild(button);`,
 				task.Task.Name)
 
-			content := mcp.EmbeddedResource{
-				Type: mcp.ContentTypeResource,
-				Resource: mcp.TextResourceContents{
-					MIMEType: "application/vnd.mcp-ui.remote-dom+javascript; framework=react",
-					Text:     htmlContent,
-					URI:      fmt.Sprintf("ui://twprojects/tasks/%d", task.Task.ID),
-				},
+			encoded, err := json.Marshal(task)
+			if err != nil {
+				return nil, err
 			}
 
 			return &mcp.CallToolResult{
-				Content: []mcp.Content{content},
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: mcp.ContentTypeText,
+						Text: string(helpers.WebLinker(ctx, encoded,
+							helpers.WebLinkerWithIDPathBuilder("/app/tasks"),
+						)),
+					},
+					mcp.EmbeddedResource{
+						Type: mcp.ContentTypeResource,
+						Resource: mcp.TextResourceContents{
+							MIMEType: "application/vnd.mcp-ui.remote-dom+javascript; framework=react",
+							Text:     htmlContent,
+							URI:      fmt.Sprintf("ui://twprojects/tasks/%d", task.Task.ID),
+						},
+					},
+				},
 			}, nil
 		},
 	}
