@@ -398,6 +398,7 @@ func TaskGetUI(engine *twapi.Engine) server.ServerTool {
 				task.Task.Name)
 
 			content := mcp.EmbeddedResource{
+				Type: mcp.ContentTypeResource,
 				Resource: mcp.TextResourceContents{
 					MIMEType: "application/vnd.mcp-ui.remote-dom+javascript; framework=react",
 					Text:     htmlContent,
