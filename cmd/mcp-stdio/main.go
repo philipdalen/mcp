@@ -16,24 +16,38 @@ import (
 	"github.com/teamwork/mcp/internal/auth"
 	"github.com/teamwork/mcp/internal/config"
 	"github.com/teamwork/mcp/internal/toolsets"
+	"github.com/teamwork/mcp/internal/twdesk"
 	"github.com/teamwork/mcp/internal/twprojects"
 	"github.com/teamwork/twapi-go-sdk/session"
 )
 
 var (
-	methods  = methodsInput([]toolsets.Method{toolsets.MethodAll})
-	readOnly bool
+	methods   = methodsInput([]toolsets.Method{toolsets.MethodAll})
+	readOnly  bool
+	logToFile string
 )
 
 func main() {
 	defer handleExit()
 
-	resources, teardown := config.Load(os.Stderr)
-	defer teardown()
-
 	flag.Var(&methods, "toolsets", "Comma-separated list of toolsets to enable")
+	flag.StringVar(&logToFile, "log-to-file", "", "Path to log file (if empty, logs to stderr)")
 	flag.BoolVar(&readOnly, "read-only", false, "Restrict the server to read-only operations")
 	flag.Parse()
+
+	f := os.Stderr
+	if logToFile != "" {
+		var err error
+		f, err = os.Open(logToFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to open log file: %s\n", err)
+			exit(exitCodeSetupFailure)
+		}
+	}
+
+	defer f.Close() //nolint:errcheck
+	resources, teardown := config.Load(f)
+	defer teardown()
 
 	ctx := context.Background()
 
@@ -67,11 +81,17 @@ func main() {
 }
 
 func newMCPServer(resources config.Resources) (*server.MCPServer, error) {
-	group := twprojects.DefaultToolsetGroup(readOnly, false, resources.TeamworkEngine())
-	if err := group.EnableToolsets(methods...); err != nil {
-		return nil, fmt.Errorf("failed to enable toolsets: %w", err)
+	projectsGroup := twprojects.DefaultToolsetGroup(readOnly, false, resources.TeamworkEngine())
+	if err := projectsGroup.EnableToolsets(methods...); err != nil {
+		return nil, fmt.Errorf("failed to enable projects toolsets: %w", err)
 	}
-	return config.NewMCPServer(resources, group), nil
+
+	deskGroup := twdesk.DefaultToolsetGroup(resources.DeskClient())
+	if err := deskGroup.EnableToolsets(methods...); err != nil {
+		return nil, fmt.Errorf("failed to enable desk toolsets: %w", err)
+	}
+
+	return config.NewMCPServer(resources, projectsGroup, deskGroup), nil
 }
 
 func mcpError(logger *slog.Logger, err error, code int) {

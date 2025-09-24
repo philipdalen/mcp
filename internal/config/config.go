@@ -20,6 +20,8 @@ import (
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	desksdk "github.com/teamwork/desksdkgo/client"
+	"github.com/teamwork/mcp/internal/network"
 	"github.com/teamwork/mcp/internal/request"
 	"github.com/teamwork/mcp/internal/toolsets"
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -79,6 +81,12 @@ func Load(logOutput io.Writer) (Resources, func()) {
 		)
 	}
 
+	// Allow logging HTTP requests
+	resources.teamworkHTTPClient.Transport = network.NewLoggingRoundTripper(
+		resources.logger,
+		resources.teamworkHTTPClient.Transport,
+	)
+
 	resources.teamworkEngine = twapi.NewEngine(session.NewBearerTokenContext(),
 		twapi.WithHTTPClient(resources.teamworkHTTPClient),
 		twapi.WithMiddleware(func(next twapi.HTTPClient) twapi.HTTPClient {
@@ -116,6 +124,28 @@ func Load(logOutput io.Writer) (Resources, func()) {
 		twapi.WithLogger(resources.logger),
 	)
 
+	resources.deskClient = desksdk.NewClient(
+		resources.Info.APIURL+"/desk/api/v2",
+		desksdk.WithHTTPClient(resources.teamworkHTTPClient),
+		desksdk.WithMiddleware(
+			func(
+				ctx context.Context,
+				req *http.Request,
+				next desksdk.RequestHandler,
+			) (*http.Response, error) {
+				// Get the bearer token from the context (if available)
+				btx := session.NewBearerTokenContext()
+				err := btx.Authenticate(ctx, req)
+				if err != nil {
+					return nil, err
+				}
+
+				request.SetProxyHeaders(req)
+				req.Header.Set("User-Agent", "Teamwork MCP/"+resources.Info.Version)
+				return next(ctx, req)
+			}),
+	)
+
 	if resources.Info.DatadogAPM.Enabled {
 		if err := startDatadog(resources); err != nil {
 			resources.logger.Error("failed to start datadog tracer",
@@ -136,13 +166,27 @@ func Load(logOutput io.Writer) (Resources, func()) {
 
 // NewMCPServer creates a new MCP server with the given resources and toolset
 // group.
-func NewMCPServer(resources Resources, group *toolsets.ToolsetGroup) *server.MCPServer {
+func NewMCPServer(resources Resources, groups ...*toolsets.ToolsetGroup) *server.MCPServer {
+	// Determine if any group has tools
+	hasTools := false
+	for _, group := range groups {
+		if group.HasTools() {
+			hasTools = true
+			break
+		}
+	}
+
 	mcpServer := server.NewMCPServer(mcpName, strings.TrimPrefix(resources.Info.Version, "v"),
 		server.WithRecovery(),
-		server.WithToolCapabilities(group.HasTools()),
+		server.WithToolCapabilities(hasTools),
 		server.WithLogging(),
 	)
-	group.RegisterAll(mcpServer)
+
+	// Register all toolset groups
+	for _, group := range groups {
+		group.RegisterAll(mcpServer)
+	}
+
 	return mcpServer
 }
 
