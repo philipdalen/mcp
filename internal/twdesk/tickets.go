@@ -76,46 +76,93 @@ func TicketList(client *deskclient.Client) server.ServerTool {
 				"priority, SLA, user, and more. Enables users to audit, analyze, or synchronize ticket data for support " +
 				"management, reporting, or integration scenarios."),
 		mcp.WithReadOnlyHintAnnotation(true),
-		mcp.WithArray("inboxIDs", mcp.Description(`
-			The IDs of the inboxes to filter by.  
-			Inbox IDs can be found by using the 'twdesk-list_inboxes' tool.
-		`)),
+		mcp.WithArray("inboxIDs",
+			mcp.Description(`
+				The IDs of the inboxes to filter by.
+				Inbox IDs can be found by using the 'twdesk-list_inboxes' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
 		mcp.WithArray("customerIDs", mcp.Description(`
 			The IDs of the customers to filter by. 
 			Customer IDs can be found by using the 'twdesk-list_customers' tool.
-		`)),
+		`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
 		mcp.WithArray("companyIDs", mcp.Description(`
 			The IDs of the companies to filter by. 
 			Company IDs can be found by using the 'twdesk-list_companies' tool.
-		`)),
+		`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
 		mcp.WithArray("tagIDs", mcp.Description(`
 			The IDs of the tags to filter by. 
 			Tag IDs can be found by using the 'twdesk-list_tags' tool.
-		`)),
-		mcp.WithArray("taskIDs", mcp.Description(`
-			The IDs of the tasks to filter by. 
-			Task IDs can be found by using the 'twprojects-list_tasks' tool.
-		`)),
-		mcp.WithArray("projectsIDs", mcp.Description(`
-			The IDs of the projects to filter by. 
-			Project IDs can be found by using the 'twprojects-list_projects' tool.
-		`)),
-		mcp.WithArray("statusIDs", mcp.Description(`
-			The IDs of the statuses to filter by. 
-			Status IDs can be found by using the 'twdesk-list_statuses' tool.
-		`)),
-		mcp.WithArray("priorityIDs", mcp.Description(`
-			The IDs of the priorities to filter by. 
-			Priority IDs can be found by using the 'twdesk-list_priorities' tool.
-		`)),
-		mcp.WithArray("slaIDs", mcp.Description(`
-			The IDs of the SLAs to filter by. 
-			SLA IDs can be found by using the 'twdesk-list_slas' tool.
-		`)),
-		mcp.WithArray("userIDs", mcp.Description(`
-			The IDs of the users to filter by. 
-			User IDs can be found by using the 'twdesk-list_users' tool.
-		`)),
+		`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("taskIDs",
+			mcp.Description(`
+				The IDs of the tasks to filter by.
+				Task IDs can be found by using the 'twprojects-list_tasks' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("projectsIDs",
+			mcp.Description(`
+				The IDs of the projects to filter by.
+				Project IDs can be found by using the 'twprojects-list_projects' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("statusIDs",
+			mcp.Description(`
+				The IDs of the statuses to filter by.
+				Status IDs can be found by using the 'twdesk-list_statuses' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("priorityIDs",
+			mcp.Description(`
+				The IDs of the priorities to filter by.
+				Priority IDs can be found by using the 'twdesk-list_priorities' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("slaIDs",
+			mcp.Description(`
+				The IDs of the SLAs to filter by.
+				SLA IDs can be found by using the 'twdesk-list_slas' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("userIDs",
+			mcp.Description(`
+				The IDs of the users to filter by.
+				User IDs can be found by using the 'twdesk-list_users' tool.
+			`),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
 		mcp.WithBoolean("shared", mcp.Description(`
 			Find tickets shared with me outside of inboxes I have access to
 		`)),

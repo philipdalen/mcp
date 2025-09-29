@@ -67,9 +67,24 @@ func StatusList(client *deskclient.Client) server.ServerTool {
 				"Enables users to audit, analyze, or synchronize status configurations for ticket management, " +
 				"reporting, or integration scenarios."),
 		mcp.WithReadOnlyHintAnnotation(true),
-		mcp.WithArray("name", mcp.Description("The name of the status to filter by.")),
-		mcp.WithArray("color", mcp.Description("The color of the status to filter by.")),
-		mcp.WithArray("code", mcp.Description("The code of the status to filter by.")),
+		mcp.WithArray("name",
+			mcp.Description("The name of the status to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
+		mcp.WithArray("color",
+			mcp.Description("The color of the status to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
+		mcp.WithArray("code",
+			mcp.Description("The code of the status to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
 	}
 
 	opts = append(opts, paginationOptions()...)

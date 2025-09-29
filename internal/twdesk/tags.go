@@ -70,7 +70,12 @@ func TagList(client *deskclient.Client) server.ServerTool {
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("name", mcp.Description("The name of the tag to filter by.")),
 		mcp.WithString("color", mcp.Description("The color of the tag to filter by.")),
-		mcp.WithArray("inboxIDs", mcp.Description("The IDs of the inboxes to filter by.")),
+		mcp.WithArray("inboxIDs",
+			mcp.Description("The IDs of the inboxes to filter by."),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
 	}
 
 	opts = append(opts, paginationOptions()...)

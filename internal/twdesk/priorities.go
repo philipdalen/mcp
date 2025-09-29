@@ -68,8 +68,18 @@ func PriorityList(client *deskclient.Client) server.ServerTool {
 				"Enables users to audit, analyze, or synchronize priority configurations for ticket management, " +
 				"reporting, or integration scenarios."),
 		mcp.WithReadOnlyHintAnnotation(true),
-		mcp.WithArray("name", mcp.Description("The name of the priority to filter by.")),
-		mcp.WithArray("color", mcp.Description("The color of the priority to filter by.")),
+		mcp.WithArray("name",
+			mcp.Description("The name of the priority to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
+		mcp.WithArray("color",
+			mcp.Description("The color of the priority to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
 	}
 
 	opts = append(opts, paginationOptions()...)

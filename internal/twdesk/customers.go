@@ -67,9 +67,24 @@ func CustomerList(client *deskclient.Client) server.ServerTool {
 				"Enables users to audit, analyze, or synchronize customer configurations for ticket management, " +
 				"reporting, or integration scenarios."),
 		mcp.WithReadOnlyHintAnnotation(true),
-		mcp.WithArray("companyIDs", mcp.Description("The IDs of the companies to filter by.")),
-		mcp.WithArray("companyNames", mcp.Description("The names of the companies to filter by.")),
-		mcp.WithArray("emails", mcp.Description("The emails of the customers to filter by.")),
+		mcp.WithArray("companyIDs",
+			mcp.Description("The IDs of the companies to filter by."),
+			mcp.Items(map[string]any{
+				"type": "integer",
+			}),
+		),
+		mcp.WithArray("companyNames",
+			mcp.Description("The names of the companies to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
+		mcp.WithArray("emails",
+			mcp.Description("The emails of the customers to filter by."),
+			mcp.Items(map[string]any{
+				"type": "string",
+			}),
+		),
 	}
 
 	opts = append(opts, paginationOptions()...)
