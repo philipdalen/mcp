@@ -262,22 +262,199 @@ func TicketCreate(client *deskclient.Client) server.ServerTool {
 			mcp.WithDescription(
 				"Create a new ticket in Teamwork Desk by specifying subject, description, priority, and status. "+
 					"Useful for automating ticket creation, integrating external systems, or customizing support workflows."),
-			mcp.WithString("subject", mcp.Required(), mcp.Description("The subject of the ticket.")),
-			mcp.WithString("description", mcp.Description("The description of the ticket.")),
-			mcp.WithString("priority", mcp.Description("The priority of the ticket.")),
-			mcp.WithString("status", mcp.Description("The status of the ticket.")),
+			mcp.WithString("subject",
+				mcp.Required(),
+				mcp.Description("The subject of the ticket."),
+			),
+			mcp.WithString("body",
+				mcp.Required(),
+				mcp.Description("The body of the ticket."),
+			),
+			mcp.WithBoolean("notifyCustomer",
+				mcp.Description("Set to true if the the customer should be sent a copy of the ticket."),
+			),
+			mcp.WithArray("bcc",
+				mcp.Description("An array of email addresses to BCC on ticket creation."),
+				mcp.Items(map[string]any{
+					"type": "string",
+				}),
+			),
+			mcp.WithArray("cc",
+				mcp.Description("An array of email addresses to CC on ticket creation."),
+				mcp.Items(map[string]any{
+					"type": "string",
+				}),
+			),
+			mcp.WithArray("files",
+				mcp.Description(`
+					An array of file IDs to attach to the ticket.  
+					Use the 'twdesk-create_file' tool to upload files.
+				`),
+				mcp.Items(map[string]any{
+					"type": "integer",
+				}),
+			),
+			mcp.WithArray("tags",
+				mcp.Description(`
+					An array of tag IDs to associate with the ticket. 
+					Tag IDs can be found by using the 'twdesk-list_tags' tool.
+				`),
+				mcp.Items(map[string]any{
+					"type": "integer",
+				}),
+			),
+			mcp.WithNumber("priorityId",
+				mcp.Description(`
+					The priority of the ticket. 
+					Use the 'twdesk-list_priorities' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("statusId",
+				mcp.Description(`
+					The status of the ticket. 
+					Use the 'twdesk-list_statuses' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("inboxId",
+				mcp.Required(),
+				mcp.Description(`
+					The inbox ID of the ticket. 
+					Use the 'twdesk-list_inboxes' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("customerId",
+				mcp.Description(`
+					The customer ID of the ticket. 
+					Use the 'twdesk-list_customers' tool to find valid IDs.
+				`),
+			),
+			mcp.WithString("customerEmail",
+				mcp.Description(`
+				The email address of the customer. 
+				This is used to identify the customer in the system.
+				Either the customerId or customerEmail is required to create a ticket.  
+				If email is provided we will either find or create the customer.
+			`),
+			),
+			mcp.WithNumber("typeId",
+				mcp.Description(`
+					The type ID of the ticket. 
+					Use the 'twdesk-list_types' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("agentId",
+				mcp.Description(`
+					The agent ID that the ticket should be assigned to. 
+					Use the 'twdesk-list_agents' tool to find valid IDs.
+				`),
+			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			ticket, err := client.Tickets.Create(ctx, &deskmodels.TicketResponse{
-				Ticket: deskmodels.Ticket{
-					Subject: request.GetString("subject", ""),
+			data := deskmodels.Ticket{
+				Subject: request.GetString("subject", ""),
+				Body:    request.GetString("body", ""),
+				Inbox: deskmodels.EntityRef{
+					ID: request.GetInt("inboxId", 0),
 				},
+			}
+
+			if request.GetInt("customerId", 0) != 0 {
+				data.Customer = deskmodels.EntityRef{
+					ID: request.GetInt("customerId", 0),
+				}
+			}
+
+			if email := request.GetString("customerEmail", ""); email != "" {
+				filter := deskclient.NewFilter()
+				filter = filter.Eq("contacts.value", email)
+
+				params := url.Values{}
+				params.Set("filter", filter.Build())
+				setPagination(&params, request)
+
+				customers, err := client.Customers.List(ctx, params)
+				if err != nil {
+					return nil, fmt.Errorf("failed to list customers: %w", err)
+				}
+
+				if len(customers.Customers) > 0 {
+					data.Customer = deskmodels.EntityRef{
+						ID: customers.Customers[0].ID,
+					}
+				} else {
+					// Create the customer
+					customer, err := client.Customers.Create(ctx, &deskmodels.CustomerResponse{
+						Customer: deskmodels.Customer{
+							Email: email,
+						},
+					})
+					if err != nil {
+						return nil, fmt.Errorf("failed to create customer: %w", err)
+					}
+					data.Customer = deskmodels.EntityRef{
+						ID: customer.Customer.ID,
+					}
+				}
+			}
+
+			if request.GetInt("priorityId", 0) != 0 {
+				data.Priority = &deskmodels.EntityRef{
+					ID: request.GetInt("priorityId", 0),
+				}
+			}
+
+			if request.GetInt("statusId", 0) != 0 {
+				data.Status = &deskmodels.EntityRef{
+					ID: request.GetInt("statusId", 0),
+				}
+			}
+
+			if request.GetInt("typeId", 0) != 0 {
+				data.Type = &deskmodels.EntityRef{
+					ID: request.GetInt("typeId", 0),
+				}
+			}
+
+			if request.GetInt("agentId", 0) != 0 {
+				data.Agent = &deskmodels.EntityRef{
+					ID: request.GetInt("agentId", 0),
+				}
+			}
+
+			if request.GetBool("notifyCustomer", false) {
+				data.NotifyCustomer = true
+			}
+
+			if len(request.GetIntSlice("files", []int{})) > 0 {
+				data.Files = []deskmodels.EntityRef{}
+				for _, fileID := range request.GetIntSlice("files", []int{}) {
+					data.Files = append(data.Files, deskmodels.EntityRef{ID: fileID})
+				}
+			}
+
+			if len(request.GetIntSlice("tags", []int{})) > 0 {
+				data.Tags = []deskmodels.EntityRef{}
+				for _, tagID := range request.GetIntSlice("tags", []int{}) {
+					data.Tags = append(data.Tags, deskmodels.EntityRef{ID: tagID})
+				}
+			}
+
+			if len(request.GetStringSlice("bcc", []string{})) > 0 {
+				data.BCC = request.GetStringSlice("bcc", []string{})
+			}
+
+			if len(request.GetStringSlice("cc", []string{})) > 0 {
+				data.CC = request.GetStringSlice("cc", []string{})
+			}
+
+			ticket, err := client.Tickets.Create(ctx, &deskmodels.TicketResponse{
+				Ticket: data,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ticket: %w", err)
 			}
 
-			return mcp.NewToolResultText(fmt.Sprintf("Ticket created successfully with ID %d", ticket.Ticket.ID)), nil
+			return mcp.NewToolResultJSON(ticket)
 		},
 	}
 }
@@ -295,16 +472,68 @@ func TicketUpdate(client *deskclient.Client) server.ServerTool {
 				mcp.Required(),
 				mcp.Description("The ID of the ticket to update."),
 			),
+			mcp.WithString("subject",
+				mcp.Description("The subject of the ticket."),
+			),
+			mcp.WithString("body",
+				mcp.Description("The body of the ticket."),
+			),
+			mcp.WithNumber("priorityId",
+				mcp.Description(`
+					The priority of the ticket. 
+					Use the 'twdesk-list_priorities' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("statusId",
+				mcp.Description(`
+					The status of the ticket. 
+					Use the 'twdesk-list_statuses' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("typeId",
+				mcp.Description(`
+					The type ID of the ticket. 
+					Use the 'twdesk-list_types' tool to find valid IDs.
+				`),
+			),
+			mcp.WithNumber("agentId",
+				mcp.Description(`
+					The agent ID that the ticket should be assigned to. 
+					Use the 'twdesk-list_agents' tool to find valid IDs.
+				`),
+			),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			_, err := client.Tickets.Update(ctx, request.GetInt("id", 0), &deskmodels.TicketResponse{
-				Ticket: deskmodels.Ticket{},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create ticket: %w", err)
+			data := deskmodels.Ticket{}
+
+			if subject := request.GetString("subject", ""); subject != "" {
+				data.Subject = subject
 			}
 
-			return mcp.NewToolResultText("Ticket updated successfully"), nil
+			if body := request.GetString("body", ""); body != "" {
+				data.Body = body
+			}
+
+			if statusId := request.GetInt("statusId", 0); statusId > 0 {
+				data.Status = &deskmodels.EntityRef{ID: statusId}
+			}
+
+			if typeId := request.GetInt("typeId", 0); typeId > 0 {
+				data.Type = &deskmodels.EntityRef{ID: typeId}
+			}
+
+			if agentId := request.GetInt("agentId", 0); agentId > 0 {
+				data.Agent = &deskmodels.EntityRef{ID: agentId}
+			}
+
+			ticket, err := client.Tickets.Update(ctx, request.GetInt("id", 0), &deskmodels.TicketResponse{
+				Ticket: data,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to update ticket: %w", err)
+			}
+
+			return mcp.NewToolResultJSON(ticket)
 		},
 	}
 }
