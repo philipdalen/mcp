@@ -12,7 +12,7 @@ LATEST_INTERNAL_TAG = 343218184206.dkr.ecr.us-east-1.amazonaws.com/teamwork/mcp:
 TAG                 = ghcr.io/teamwork/mcp:$(VERSION)
 INTERNAL_TAG        = 343218184206.dkr.ecr.us-east-1.amazonaws.com/teamwork/mcp:$(VERSION)
 
-.PHONY: build build-stdio push push-stdio install
+.PHONY: build build-stdio build-local push push-stdio install
 
 default: build
 
@@ -59,6 +59,10 @@ push-stdio:
 	  --push \
 	  --progress=plain \
 	  .
+
+build-local:
+	go build -o tw-mcp cmd/mcp-stdio/main.go
+	@echo "Binary built: tw-mcp"
 
 install:
 	@echo "No installation required"
